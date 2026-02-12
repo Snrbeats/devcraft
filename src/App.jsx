@@ -70,7 +70,7 @@ const Nav = ({ page, setPage, user, setUser }) => {
       <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:68 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("home")}>
           <div style={{ width:36, height:36, borderRadius:10, background:COLORS.amber, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⚡</div>
-          <span style={{ fontFamily:"'Lora', serif", fontWeight:700, fontSize:20, color:COLORS.brown }}>DevCraft</span>
+          <span style={{ fontFamily:"'Lora', serif", fontWeight:700, fontSize:20, color:COLORS.brown }}>DevCraft Hub</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           {!user ? (<><Btn variant="ghost" size="sm" onClick={()=>setPage("login")}>Sign In</Btn><Btn variant="primary" size="sm" onClick={()=>setPage("signup")}>Get Started</Btn></>) : (<><Btn variant="ghost" size="sm" onClick={()=>setPage("dashboard")}>Dashboard</Btn><div style={{ width:36, height:36, borderRadius:99, background:COLORS.amber, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:700, cursor:"pointer", fontSize:14 }} onClick={()=>setPage("dashboard")}>{user.name[0]}</div><Btn variant="secondary" size="sm" onClick={()=>{setUser(null);setPage("home");}}>Log out</Btn></>)}

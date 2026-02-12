@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════
-# DevCraft — One-Command Deploy Script
-# Run from: /Users/janaisenior/DevCraft
+# DevCraft Hub — One-Command Deploy Script
+# Run from: /Users/janaisenior/DevCraft/devcraft-app
 # Usage: bash deploy.sh
 # ═══════════════════════════════════════════════════
 
@@ -10,12 +10,12 @@ BOLD='\033[1m'; GREEN='\033[0;32m'; AMBER='\033[0;33m'; NC='\033[0m'
 step() { echo -e "\n${AMBER}${BOLD}▶ $1${NC}"; }
 ok()   { echo -e "${GREEN}✓ $1${NC}"; }
 
-echo -e "\n${BOLD}⚡ DevCraft Deploy Script${NC}"
+echo -e "\n${BOLD}⚡ DevCraft Hub Deploy Script${NC}"
 echo "══════════════════════════"
 
 # ── Make sure we're in the right place ──
 if [ ! -f "package.json" ]; then
-  echo "❌ Run this from inside /Users/janaisenior/DevCraft"
+  echo "❌ Run this from inside /Users/janaisenior/DevCraft/devcraft-app"
   exit 1
 fi
 
@@ -100,7 +100,7 @@ const Nav = ({ page, setPage, user, setUser }) => {
       <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:68 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={()=>setPage("home")}>
           <div style={{ width:36, height:36, borderRadius:10, background:COLORS.amber, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⚡</div>
-          <span style={{ fontFamily:"'Lora', serif", fontWeight:700, fontSize:20, color:COLORS.brown }}>DevCraft</span>
+          <span style={{ fontFamily:"'Lora', serif", fontWeight:700, fontSize:20, color:COLORS.brown }}>DevCraft Hub</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           {!user ? (<><Btn variant="ghost" size="sm" onClick={()=>setPage("login")}>Sign In</Btn><Btn variant="primary" size="sm" onClick={()=>setPage("signup")}>Get Started</Btn></>) : (<><Btn variant="ghost" size="sm" onClick={()=>setPage("dashboard")}>Dashboard</Btn><div style={{ width:36, height:36, borderRadius:99, background:COLORS.amber, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:700, cursor:"pointer", fontSize:14 }} onClick={()=>setPage("dashboard")}>{user.name[0]}</div><Btn variant="secondary" size="sm" onClick={()=>{setUser(null);setPage("home");}}>Log out</Btn></>)}
@@ -541,6 +541,30 @@ EOF
 ok "vite.config.js updated"
 
 # ══════════════════════════════════════════════════
+# FILE 6 — index.html (browser tab title + meta)
+# ══════════════════════════════════════════════════
+step "Updating index.html branding"
+cat > index.html << 'EOF'
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DevCraft Hub — Professional software development services. From landing pages to full SaaS platforms." />
+    <meta property="og:title" content="DevCraft Hub" />
+    <meta property="og:description" content="Software built with care, delivered with craft." />
+    <title>DevCraft Hub</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+EOF
+ok "index.html updated to DevCraft Hub"
+
+# ══════════════════════════════════════════════════
 # FILE 5 — tailwind.config.js (minimal, for future use)
 # ══════════════════════════════════════════════════
 step "Writing tailwind.config.js"
@@ -582,7 +606,7 @@ ok "Build succeeded ✓"
 # ── Git commit & push ──
 step "Committing and pushing to GitHub"
 git add -A
-git commit -m "feat: DevCraft full client portal — services, auth, calendar, checkout, dashboard"
+git commit -m "feat: DevCraft Hub full client portal — services, auth, calendar, checkout, dashboard"
 git push origin main
 ok "Pushed to GitHub ✓"
 
@@ -591,9 +615,9 @@ echo -e "${GREEN}${BOLD}══════════════════�
 echo -e "${GREEN}${BOLD}  🚀 DEPLOY COMPLETE!${NC}"
 echo -e "${GREEN}${BOLD}═══════════════════════════════════════${NC}"
 echo ""
-echo -e "  Live URL → ${BOLD}https://devcraft-ashen.vercel.app${NC}"
+echo -e "  Live URL → ${BOLD}https://devcrafthub.vercel.app${NC}"
 echo ""
 echo -e "  Vercel will auto-deploy in ~45 seconds."
-echo -e "  Watch it at: vercel.com/snrs-projects-8d0ca895/devcraft"
+echo -e "  Watch it at: vercel.com/snrs-projects-8d0ca895/devcrafthub"
 echo ""
 
