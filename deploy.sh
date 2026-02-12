@@ -1,3 +1,33 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════
+# DevCraft — One-Command Deploy Script
+# Run from: /Users/janaisenior/DevCraft
+# Usage: bash deploy.sh
+# ═══════════════════════════════════════════════════
+
+set -e
+BOLD='\033[1m'; GREEN='\033[0;32m'; AMBER='\033[0;33m'; NC='\033[0m'
+step() { echo -e "\n${AMBER}${BOLD}▶ $1${NC}"; }
+ok()   { echo -e "${GREEN}✓ $1${NC}"; }
+
+echo -e "\n${BOLD}⚡ DevCraft Deploy Script${NC}"
+echo "══════════════════════════"
+
+# ── Make sure we're in the right place ──
+if [ ! -f "package.json" ]; then
+  echo "❌ Run this from inside /Users/janaisenior/DevCraft"
+  exit 1
+fi
+
+step "Creating folder structure"
+mkdir -p src/lib src/hooks src/components
+ok "Folders ready"
+
+# ══════════════════════════════════════════════════
+# FILE 1 — App.jsx (Main app)
+# ══════════════════════════════════════════════════
+step "Writing src/App.jsx"
+cat > src/App.jsx << 'EOF'
 import { useState, useEffect } from "react";
 
 const COLORS = {
@@ -462,3 +492,108 @@ export default function App() {
   };
   return (<><style>{globalStyles}</style><Nav page={page} setPage={setPage} user={user} setUser={setUser}/><div key={page} style={{ animation:"fadeIn 0.35s ease" }}>{renderPage()}</div></>);
 }
+EOF
+ok "src/App.jsx written"
+
+# ══════════════════════════════════════════════════
+# FILE 2 — main.jsx (entry point)
+# ══════════════════════════════════════════════════
+step "Writing src/main.jsx"
+cat > src/main.jsx << 'EOF'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+EOF
+ok "src/main.jsx written"
+
+# ══════════════════════════════════════════════════
+# FILE 3 — index.css (reset only, styles are inline)
+# ══════════════════════════════════════════════════
+step "Writing src/index.css"
+cat > src/index.css << 'EOF'
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; }
+#root { min-height: 100vh; }
+EOF
+ok "src/index.css written"
+
+# ══════════════════════════════════════════════════
+# FILE 4 — vite.config.js
+# ══════════════════════════════════════════════════
+step "Writing vite.config.js"
+cat > vite.config.js << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: { outDir: 'dist' },
+})
+EOF
+ok "vite.config.js updated"
+
+# ══════════════════════════════════════════════════
+# FILE 5 — tailwind.config.js (minimal, for future use)
+# ══════════════════════════════════════════════════
+step "Writing tailwind.config.js"
+cat > tailwind.config.js << 'EOF'
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html","./src/**/*.{js,jsx,ts,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+}
+EOF
+ok "tailwind.config.js written"
+
+# ══════════════════════════════════════════════════
+# FILE 6 — .gitignore (make sure .env is excluded)
+# ══════════════════════════════════════════════════
+step "Updating .gitignore"
+cat > .gitignore << 'EOF'
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+EOF
+ok ".gitignore updated"
+
+# ── Install dependencies ──
+step "Installing npm dependencies"
+npm install --legacy-peer-deps
+ok "Dependencies installed"
+
+# ── Quick local build test ──
+step "Testing production build"
+npm run build
+ok "Build succeeded ✓"
+
+# ── Git commit & push ──
+step "Committing and pushing to GitHub"
+git add -A
+git commit -m "feat: DevCraft full client portal — services, auth, calendar, checkout, dashboard"
+git push origin main
+ok "Pushed to GitHub ✓"
+
+echo ""
+echo -e "${GREEN}${BOLD}═══════════════════════════════════════${NC}"
+echo -e "${GREEN}${BOLD}  🚀 DEPLOY COMPLETE!${NC}"
+echo -e "${GREEN}${BOLD}═══════════════════════════════════════${NC}"
+echo ""
+echo -e "  Live URL → ${BOLD}https://devcraft-ashen.vercel.app${NC}"
+echo ""
+echo -e "  Vercel will auto-deploy in ~45 seconds."
+echo -e "  Watch it at: vercel.com/snrs-projects-8d0ca895/devcraft"
+echo ""
+
