@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth.jsx";
+import StripeCheckout from "./components/StripeCheckout.jsx";
 
 const C = {
   cream:"#FDF6EC", cream2:"#FFF9F4", amber:"#D4622A", amberLight:"#F08040",
@@ -519,23 +520,33 @@ const CalendarPage = ({ setPage }) => {
 };
 
 // ── Checkout Page ─────────────────────────────────
+// ── Checkout Page ─────────────────────────────────
 const CheckoutPage = ({ selectedService }) => {
-  const { user } = useAuth();
-  const [step,    setStep]    = useState(1);
-  const [card,    setCard]    = useState("");
-  const [expiry,  setExpiry]  = useState("");
-  const [cvv,     setCvv]     = useState("");
-  const [name,    setName]    = useState(user?.user_metadata?.full_name || "");
-  const [loading, setLoading] = useState(false);
-  const svc   = selectedService ? SERVICES.find(s=>s.id===selectedService.service) : SERVICES[1];
-  const total = selectedService?.total || svc.price;
-  const fmtC  = v => v.replace(/\D/g,"").slice(0,16).replace(/(\d{4})/g,"$1 ").trim();
-  const fmtE  = v => v.replace(/\D/g,"").slice(0,4).replace(/(\d{2})(\d)/,"$1/$2");
-  const pay   = () => { setLoading(true); setTimeout(()=>{ setLoading(false); setStep(3); },2200); };
-  const steps = ["Review","Payment","Confirmed"];
+  const { user } = useAuth()
+  const [step,    setStep]    = useState(1)
+  const [success, setSuccess] = useState(false)
+  const svc   = selectedService ? SERVICES.find(s=>s.id===selectedService.service) : SERVICES[1]
+  const total = selectedService?.total || svc.price
+  // 50% deposit due today
+  const deposit = Math.round(total * 0.5)
+  const steps = ["Review","Payment","Confirmed"]
+
+  if (success || step === 3) return (
+    <div style={{ paddingTop:100, padding:"100px 5% 80px", maxWidth:600, margin:"0 auto", textAlign:"center" }}>
+      <div style={{ fontSize:72, marginBottom:24 }}>✅</div>
+      <h2 style={{ fontFamily:"'Lora',serif", fontSize:38, fontWeight:700, color:C.brown, marginBottom:16 }}>Payment Successful!</h2>
+      <p style={{ color:C.brownLight, fontSize:17, lineHeight:1.7, marginBottom:32 }}>
+        Your <strong>{svc.tier} Package</strong> deposit of <strong>${deposit.toLocaleString()}</strong> is confirmed.
+        <br/><br/>You'll receive a welcome email and project kickoff invite within 24 hours.
+      </p>
+    </div>
+  )
+
   return (
     <div style={{ paddingTop:100, padding:"100px 5% 80px", maxWidth:900, margin:"0 auto" }}>
       <h1 style={{ fontFamily:"'Lora',serif", fontSize:42, fontWeight:700, color:C.brown, marginBottom:32 }}>Checkout</h1>
+
+      {/* Step indicator */}
       <div style={{ display:"flex", marginBottom:48, position:"relative" }}>
         {steps.map((s,i) => (
           <div key={s} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", position:"relative" }}>
@@ -543,88 +554,109 @@ const CheckoutPage = ({ selectedService }) => {
             {i<steps.length-1 && <div style={{ position:"absolute", top:16, left:"50%", right:0, height:2, background:step>i+1?C.amber:C.border }}/>}
             <div style={{ width:32, height:32, borderRadius:"50%", zIndex:1,
               background:step>i?C.amber:step===i+1?C.brown:C.border,
-              color:step>i||step===i+1?"#fff":C.brownLight, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700 }}>
+              color:step>i||step===i+1?"#fff":C.brownLight,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700 }}>
               {step>i+1?"✓":i+1}
             </div>
             <span style={{ fontSize:12, marginTop:8, color:step===i+1?C.brown:C.brownLight, fontWeight:step===i+1?600:400 }}>{s}</span>
           </div>
         ))}
       </div>
-      {step===3 ? (
-        <div style={{ textAlign:"center", padding:"60px 0" }}>
-          <div style={{ fontSize:72, marginBottom:24 }}>✅</div>
-          <h2 style={{ fontFamily:"'Lora',serif", fontSize:38, fontWeight:700, color:C.brown, marginBottom:16 }}>Payment Successful!</h2>
-          <p style={{ color:C.brownLight, fontSize:17, lineHeight:1.7, maxWidth:480, margin:"0 auto 32px" }}>
-            Your <strong>{svc.tier} Package</strong> is confirmed. Welcome email coming within 24 hours.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:28, alignItems:"start" }}>
-          <div>
-            {step===1 && (
-              <Card>
-                <h2 style={{ fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.brown, marginBottom:20 }}>Order Review</h2>
-                <div style={{ borderRadius:14, background:C.amberPale, padding:"20px 24px", marginBottom:20, display:"flex", gap:16, alignItems:"center" }}>
-                  <span style={{ fontSize:40 }}>{svc.badge}</span>
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:18, color:C.brown }}>{svc.tier} Package</div>
-                    <div style={{ color:C.brownLight, fontSize:14, marginTop:4 }}>{svc.description}</div>
-                  </div>
-                  <div style={{ marginLeft:"auto", fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.amber }}>${svc.price.toLocaleString()}</div>
-                </div>
-                <Btn style={{ width:"100%", justifyContent:"center" }} onClick={()=>setStep(2)}>Continue to Payment →</Btn>
-              </Card>
-            )}
-            {step===2 && (
-              <Card>
-                <h2 style={{ fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.brown, marginBottom:24 }}>Payment Details</h2>
-                <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-                  <Input label="Cardholder Name" value={name} onChange={setName} placeholder="Your Name" icon="👤"/>
-                  <Input label="Card Number" value={card} onChange={v=>setCard(fmtC(v))} placeholder="1234 5678 9012 3456" icon="💳"/>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                    <Input label="Expiry" value={expiry} onChange={v=>setExpiry(fmtE(v))} placeholder="MM/YY" icon="📅"/>
-                    <Input label="CVV" type="password" value={cvv} onChange={v=>setCvv(v.slice(0,4))} placeholder="•••" icon="🔒"/>
-                  </div>
-                  <div style={{ background:C.greenPale, borderRadius:10, padding:"12px 16px", display:"flex", gap:10, fontSize:13, color:C.green }}>
-                    🔒 <span>256-bit SSL. Card info never stored here.</span>
-                  </div>
-                  <Btn style={{ width:"100%", justifyContent:"center" }} onClick={pay} disabled={loading||!card||!expiry||!cvv||!name}>
-                    {loading
-                      ? <span style={{ display:"flex", alignItems:"center", gap:8 }}><Spin/>Processing…</span>
-                      : "Pay $" + total.toLocaleString() + " →"
-                    }
-                  </Btn>
-                </div>
-              </Card>
-            )}
-          </div>
-          <Card style={{ position:"sticky", top:100 }}>
-            <h3 style={{ fontFamily:"'Lora',serif", fontWeight:700, fontSize:18, color:C.brown, marginBottom:20 }}>Order Summary</h3>
-            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:20 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:14 }}>
-                <span style={{ color:C.brownLight }}>{svc.tier} Package</span>
-                <span>${svc.price.toLocaleString()}</span>
-              </div>
-              {selectedService?.addons?.map(id=>{
-                const a=ADDONS.find(x=>x.id===id);
-                return <div key={id} style={{ display:"flex", justifyContent:"space-between", fontSize:14 }}><span style={{ color:C.brownLight }}>{a.name}</span><span>+${a.price.toLocaleString()}</span></div>;
-              })}
-            </div>
-            <div style={{ borderTop:"2px solid "+C.border, paddingTop:16, display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontWeight:700, color:C.brown }}>Total</span>
-              <span style={{ fontFamily:"'Lora',serif", fontSize:22, fontWeight:700, color:C.amber }}>${total.toLocaleString()}</span>
-            </div>
-            <div style={{ marginTop:20, background:C.goldPale, borderRadius:10, padding:"12px 16px", fontSize:13, color:C.brownMid }}>
-              💡 50% due today, 50% on delivery.
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
-  );
-};
 
-// ── Dashboard ─────────────────────────────────────
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:28, alignItems:"start" }}>
+        <div>
+          {step===1 && (
+            <div style={{ background:C.white, borderRadius:20, border:"1px solid "+C.border, padding:28 }}>
+              <h2 style={{ fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.brown, marginBottom:20 }}>Order Review</h2>
+              <div style={{ borderRadius:14, background:C.amberPale, padding:"20px 24px", marginBottom:24,
+                display:"flex", gap:16, alignItems:"center" }}>
+                <span style={{ fontSize:40 }}>{svc.badge}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:18, color:C.brown }}>{svc.tier} Package</div>
+                  <div style={{ color:C.brownLight, fontSize:14, marginTop:4 }}>{svc.description}</div>
+                </div>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.amber }}>${svc.price.toLocaleString()}</div>
+              </div>
+              {selectedService?.addons?.length > 0 && (
+                <div style={{ marginBottom:20 }}>
+                  {selectedService.addons.map(id => {
+                    const a = ADDONS.find(x=>x.id===id)
+                    return (
+                      <div key={id} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0",
+                        borderBottom:"1px solid "+C.border, fontSize:14, color:C.brownLight }}>
+                        <span>{a.icon} {a.name}</span>
+                        <span>+${a.price.toLocaleString()}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div style={{ background:C.goldPale, borderRadius:10, padding:"14px 18px", marginBottom:24, fontSize:14, color:C.brown }}>
+                💡 <strong>50% deposit today (${deposit.toLocaleString()})</strong>, remaining ${(total-deposit).toLocaleString()} due on project delivery.
+              </div>
+              <button onClick={()=>setStep(2)} style={{
+                width:"100%", padding:"14px 24px", borderRadius:12, border:"none",
+                background:C.amber, color:"#fff", fontWeight:700, fontSize:15, cursor:"pointer",
+              }}>
+                Continue to Payment →
+              </button>
+            </div>
+          )}
+
+          {step===2 && (
+            <div style={{ background:C.white, borderRadius:20, border:"1px solid "+C.border, padding:28 }}>
+              <h2 style={{ fontFamily:"'Lora',serif", fontSize:24, fontWeight:700, color:C.brown, marginBottom:24 }}>Payment Details</h2>
+              <StripeCheckout
+                total={deposit}
+                serviceTier={svc.tier}
+                customerEmail={user?.email || ""}
+                onSuccess={()=>setSuccess(true)}
+              />
+              <button onClick={()=>setStep(1)} style={{
+                marginTop:16, background:"none", border:"none", color:C.brownLight,
+                fontSize:13, cursor:"pointer", textDecoration:"underline",
+              }}>
+                ← Back to review
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Order summary sidebar */}
+        <div style={{ background:C.white, borderRadius:20, border:"1px solid "+C.border, padding:28, position:"sticky", top:100 }}>
+          <h3 style={{ fontFamily:"'Lora',serif", fontWeight:700, fontSize:18, color:C.brown, marginBottom:20 }}>Order Summary</h3>
+          <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14 }}>
+              <span style={{ color:C.brownLight }}>{svc.tier} Package</span>
+              <span>${svc.price.toLocaleString()}</span>
+            </div>
+            {selectedService?.addons?.map(id => {
+              const a = ADDONS.find(x=>x.id===id)
+              return (
+                <div key={id} style={{ display:"flex", justifyContent:"space-between", fontSize:14 }}>
+                  <span style={{ color:C.brownLight }}>{a.name}</span>
+                  <span>+${a.price.toLocaleString()}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ borderTop:"2px solid "+C.border, paddingTop:16, marginBottom:12, display:"flex", justifyContent:"space-between" }}>
+            <span style={{ fontWeight:700, color:C.brown }}>Total</span>
+            <span style={{ fontFamily:"'Lora',serif", fontSize:22, fontWeight:700, color:C.amber }}>${total.toLocaleString()}</span>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:C.brownLight }}>
+            <span>Due today (50%)</span>
+            <span style={{ fontWeight:700, color:C.brown }}>${deposit.toLocaleString()}</span>
+          </div>
+          <div style={{ marginTop:16, background:C.greenPale, borderRadius:10, padding:"10px 14px", fontSize:12, color:C.green }}>
+            🔒 Secured by Stripe
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const Dashboard = ({ setPage }) => {
   const { user, displayName, isLoggedIn, logout } = useAuth();
   const [tab,  setTab]  = useState("overview");
