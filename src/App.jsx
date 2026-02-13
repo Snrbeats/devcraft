@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "./hooks/useAuth.jsx";
 import StripeCheckout from "./components/StripeCheckout.jsx";
 import { supabase } from "./lib/supabase.js";
@@ -399,121 +399,70 @@ const ServicesPage = ({ setPage, setSelectedService }) => {
 };
 
 // ── Calendar Page ─────────────────────────────────
+const CAL_USERNAME = "devcrafthub";
+
+const EVENT_TYPES = [
+  { slug:"discovery-call",    label:"Discovery Call",    dur:"30 min", price:"Free",  icon:"🔍", desc:"No-pressure intro call to explore your project." },
+  { slug:"project-kickoff",   label:"Project Kickoff",   dur:"60 min", price:"Free",  icon:"🚀", desc:"For new clients — align on scope & milestones." },
+  { slug:"weekly-check-in",   label:"Weekly Check-in",   dur:"30 min", price:"Free",  icon:"📋", desc:"Standing sync for active DevCraft Hub clients." },
+  { slug:"paid-consultation", label:"Paid Consultation", dur:"60 min", price:"$150",  icon:"💡", desc:"1-on-1 strategy session with a clear action plan." },
+];
+
 const CalendarPage = ({ setPage }) => {
-  const { isLoggedIn } = useAuth();
-  const today = new Date(2026,1,12);
-  const [month,   setMonth]   = useState(new Date(2026,1,1));
-  const [day,     setDay]     = useState(null);
-  const [time,    setTime]    = useState(null);
-  const [type,    setType]    = useState("discovery");
-  const [booked,  setBooked]  = useState(false);
-  const [loading, setLoading] = useState(false);
-  const TIMES   = ["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"];
-  const BLOCKED = ["10:00 AM","2:30 PM","9:30 AM"];
-  const dim = new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
-  const fd  = new Date(month.getFullYear(),month.getMonth(),1).getDay();
-  const mn  = month.toLocaleString("default",{month:"long",year:"numeric"});
-  const unavail = d => { const dt=new Date(month.getFullYear(),month.getMonth(),d); return dt.getDay()===0||dt.getDay()===6||dt<today; };
-  const confirm = async () => {
-    if (!isLoggedIn) { setPage("signup"); return; }
-    setLoading(true);
-    setTimeout(()=>{ setLoading(false); setBooked(true); }, 1200);
-  };
-  if (booked) return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"80px 5%" }}>
-      <div style={{ textAlign:"center", maxWidth:480 }}>
-        <div style={{ fontSize:72, marginBottom:24 }}>🎉</div>
-        <h1 style={{ fontFamily:"'Lora',serif", fontSize:38, fontWeight:700, color:C.brown, marginBottom:16 }}>You're booked!</h1>
-        <p style={{ color:C.brownLight, fontSize:17, lineHeight:1.7, marginBottom:32 }}>
-          Your {type==="discovery"?"30-minute discovery call":"project kickoff meeting"} is confirmed for{" "}
-          <strong>{day && new Date(month.getFullYear(),month.getMonth(),day).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</strong>{" "}
-          at <strong>{time}</strong>.<br/><br/>A calendar invite has been sent to your email.
-        </p>
-        <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
-          <Btn onClick={()=>setPage("home")}>Back to Home</Btn>
-          {isLoggedIn && <Btn variant="secondary" onClick={()=>setPage("dashboard")}>View Dashboard</Btn>}
-        </div>
-      </div>
-    </div>
-  );
+  const [selected, setSelected] = useState("discovery-call");
+  const iframeRef = useRef(null);
+
+  // Load Cal.com embed script once
+  useEffect(() => {
+    if (window.Cal) return;
+    const script = document.createElement("script");
+    script.src = "https://app.cal.com/embed/embed.js";
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
+  const bookingUrl = `https://cal.com/${CAL_USERNAME}/${selected}?embed=true`;
+
   return (
-    <div style={{ paddingTop:100, padding:"100px 5% 80px", maxWidth:1000, margin:"0 auto" }}>
-      <div style={{ textAlign:"center", marginBottom:48 }}>
-        <h1 style={{ fontFamily:"'Lora',serif", fontSize:48, fontWeight:700, color:C.brown }}>Book a Session</h1>
-        <p style={{ color:C.brownLight, fontSize:18, marginTop:12 }}>Pick a time that works. All calls via Google Meet.</p>
+    <div style={{ paddingTop:68, background:C.cream, minHeight:"100vh" }}>
+      {/* Hero */}
+      <div style={{ background:C.brown, padding:"60px 5% 48px", textAlign:"center" }}>
+        <h1 style={{ fontFamily:"'Lora',serif", fontSize:46, fontWeight:700, color:"#fff", marginBottom:12 }}>Book a Session</h1>
+        <p style={{ color:"rgba(255,255,255,0.65)", fontSize:18 }}>Real availability. Instant confirmation. No back-and-forth.</p>
       </div>
-      <div style={{ display:"flex", gap:12, marginBottom:36, flexWrap:"wrap" }}>
-        {[{id:"discovery",label:"🔍 Discovery Call",dur:"30 min · Free"},{id:"kickoff",label:"🚀 Project Kickoff",dur:"60 min · Clients only"}].map(c=>(
-          <div key={c.id} onClick={()=>setType(c.id)}
-            style={{ padding:"16px 24px", borderRadius:14, cursor:"pointer", flex:"1 1 200px",
-              border:"2px solid "+(type===c.id?C.amber:C.border), background:type===c.id?C.amberPale:C.white, transition:"all 0.2s" }}>
-            <div style={{ fontWeight:600, fontSize:16, color:C.brown }}>{c.label}</div>
-            <div style={{ fontSize:13, color:C.brownLight, marginTop:4 }}>{c.dur}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:24 }}>
-        <Card>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
-            <button onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.brownLight, padding:"4px 8px" }}>‹</button>
-            <h3 style={{ fontFamily:"'Lora',serif", fontWeight:700, fontSize:20, color:C.brown }}>{mn}</h3>
-            <button onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.brownLight, padding:"4px 8px" }}>›</button>
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, textAlign:"center" }}>
-            {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d=><div key={d} style={{ fontSize:12, fontWeight:600, color:C.brownLight, padding:"8px 0" }}>{d}</div>)}
-            {Array(fd).fill(null).map((_,i)=><div key={"e"+i}/>)}
-            {Array(dim).fill(null).map((_,i)=>{
-              const d=i+1, un=unavail(d), sel=day===d;
-              const isTd=today.getDate()===d&&today.getMonth()===month.getMonth()&&today.getFullYear()===month.getFullYear();
-              return (
-                <div key={d} onClick={()=>!un&&(setDay(d),setTime(null))}
-                  style={{ padding:"10px 4px", borderRadius:10, fontSize:14, fontWeight:sel?700:400,
-                    cursor:un?"not-allowed":"pointer", background:sel?C.amber:isTd?C.amberPale:"transparent",
-                    color:sel?"#fff":un?C.border:C.brown,
-                    border:isTd&&!sel?"2px solid "+C.amber:"2px solid transparent", transition:"all 0.15s" }}>
-                  {d}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <Card style={{ flex:1 }}>
-            {!day ? (
-              <div style={{ textAlign:"center", padding:"32px 0", color:C.brownLight }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>📅</div>
-                <p style={{ fontSize:14 }}>Select a date to see available times</p>
-              </div>
-            ) : (
-              <>
-                <h3 style={{ fontFamily:"'Lora',serif", fontWeight:600, fontSize:16, color:C.brown, marginBottom:16 }}>
-                  {new Date(month.getFullYear(),month.getMonth(),day).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
-                </h3>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {TIMES.map(t => {
-                    const bl=BLOCKED.includes(t), sel=time===t;
-                    return (
-                      <div key={t} onClick={()=>!bl&&setTime(t)}
-                        style={{ padding:"11px 16px", borderRadius:10, fontSize:14, fontWeight:sel?600:400,
-                          cursor:bl?"not-allowed":"pointer", background:sel?C.amber:bl?C.cream2:C.cream,
-                          color:sel?"#fff":bl?C.border:C.brown, border:"1.5px solid "+(sel?C.amber:C.border),
-                          transition:"all 0.15s", display:"flex", justifyContent:"space-between" }}>
-                        <span>{t}</span>
-                        {bl && <span style={{ fontSize:11, color:C.border }}>Taken</span>}
-                        {sel && <span>✓</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </Card>
-          {day && time && (
-            <Btn style={{ width:"100%", justifyContent:"center" }} onClick={confirm} disabled={loading}>
-              {loading ? <span style={{ display:"flex", alignItems:"center", gap:8 }}><Spin/>Confirming...</span> : "Confirm Booking →"}
-            </Btn>
-          )}
+
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"48px 5% 80px" }}>
+        {/* Event type selector */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:40 }}>
+          {EVENT_TYPES.map(e => (
+            <div key={e.slug} onClick={() => setSelected(e.slug)}
+              style={{ padding:"20px 22px", borderRadius:16, cursor:"pointer", transition:"all 0.2s",
+                border:"2px solid "+(selected===e.slug ? C.amber : C.border),
+                background: selected===e.slug ? C.amberPale : C.white,
+                boxShadow: selected===e.slug ? "0 4px 20px #D4622A22" : "none" }}>
+              <div style={{ fontSize:28, marginBottom:10 }}>{e.icon}</div>
+              <div style={{ fontWeight:700, fontSize:15, color:C.brown }}>{e.label}</div>
+              <div style={{ fontSize:12, color:C.brownLight, margin:"4px 0 8px" }}>{e.dur} · <span style={{ color: e.price==="Free" ? C.green : C.amber, fontWeight:600 }}>{e.price}</span></div>
+              <div style={{ fontSize:13, color:C.brownLight, lineHeight:1.5 }}>{e.desc}</div>
+            </div>
+          ))}
         </div>
+
+        {/* Cal.com inline embed */}
+        <div style={{ background:C.white, borderRadius:20, border:"1px solid "+C.border, overflow:"hidden", minHeight:700 }}>
+          <iframe
+            ref={iframeRef}
+            key={selected}
+            src={bookingUrl}
+            style={{ width:"100%", height:750, border:"none", display:"block" }}
+            title="Book a session"
+            loading="lazy"
+          />
+        </div>
+
+        <p style={{ textAlign:"center", color:C.brownLight, fontSize:13, marginTop:20 }}>
+          All times shown in your local timezone · Powered by <a href="https://cal.com" target="_blank" rel="noopener noreferrer" style={{ color:C.amber }}>Cal.com</a>
+        </p>
       </div>
     </div>
   );
